@@ -1,5 +1,5 @@
 ---
-title: "InteractivePlot"
+title: "Gapminder dataset analysis"
 author: "Dr Paul Williamson"
 date: "03/11/2021"
 output: html_document
@@ -9,22 +9,59 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Open Libraries
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+library(tidyverse)
+library(plotly)
+library(hrbrthemes)
+library(viridis)
+library(gridExtra)
+library(gapminder)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+## Wrangle data
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+Keep only data for 2007, then drop year column
+
+```{r}
+data <- gapminder %>% filter(year=="2007") %>% select(-year)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Add a new column ('text') which contains plot data labels for each country
+
+```{r}
+data <- data %>% 
+  mutate(gdpPercap=round(gdpPercap,0)) %>% 
+  mutate(pop=round(pop/1000000,2)) %>%
+  mutate(lifeExp=round(lifeExp,1)) %>%
+  arrange(desc(pop)) %>%
+  mutate(country = factor(country, country)) %>%
+  mutate(text = paste("Country: ", country,
+                      "\nPopulation (M): ", pop,
+                      "\nLife Expectancy: ", lifeExp, 
+                      "\nGDP per Capita: ", gdpPercap,
+                      sep=""))
+```
+
+## Build chart
+
+```{r}
+ggplot(data=data, 
+       aes(x=gdpPercap, y=lifeExp, size=pop, color=continent, text=text)) +
+  geom_point(alpha=0.7)
+```
+
+
+```{r}
+p <- ggplot(data=data, 
+       aes(x=gdpPercap, y=lifeExp, size=pop, color=continent, text=text)) +
+  geom_point(alpha=0.7) +
+  scale_size(range = c(1.4, 19), name="Population (M)") +
+  scale_color_viridis(discrete = TRUE, guide=FALSE) +
+  theme_ipsum() +
+  theme(legend.position="none")
+
+ggplotly(p, tooltip="text")
+```
